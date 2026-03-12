@@ -113,18 +113,23 @@ export function computeRoundScores(state: GameState): Record<string, number> {
 
   playerIds.forEach(pid => {
     const pGuesses: Guess[] = guesses?.[pid] ? Object.values(guesses[pid]) : []
-    let playerPoints = 0
-    pGuesses.forEach(g => {
-      const pts = getScore(g.row, g.col, targetRow, targetCol)
-      playerPoints += pts
-      if (pts > 0) cueGiverPoints += numPlayers <= 3 ? 2 : 1
-    })
-    roundScores[pid] = playerPoints
+
+    // Only score the latest guess — round 2 if present, else round 1
+    const guess2 = pGuesses.find(g => g.round === 2)
+    const guess1 = pGuesses.find(g => g.round === 1)
+    const finalGuess = guess2 ?? guess1
+
+    if (!finalGuess) return
+
+    const pts = getScore(finalGuess.row, finalGuess.col, targetRow, targetCol)
+    roundScores[pid] = pts
+    if (pts > 0) cueGiverPoints += numPlayers <= 3 ? 2 : 1
   })
 
   roundScores[cueGiverId] = Math.min(9, cueGiverPoints)
   return roundScores
 }
+
 
 export async function finalizeRound(gameId: string, state: GameState): Promise<void> {
   const snap = await get(ref(db, `games/${gameId}`))
